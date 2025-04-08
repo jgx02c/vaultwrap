@@ -13,3 +13,12 @@ vault-system/
 │   └── README.md
 └── shared/             # Shared structs, encryption logic
     └── src/
+
+
+
+cd vaultd
+cargo run
+
+
+cd ../vaultwrap
+cargo run -- run python3 app.py
