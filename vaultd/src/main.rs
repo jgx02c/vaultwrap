@@ -1,7 +1,6 @@
 use shared::*;
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -94,6 +93,11 @@ async fn main() -> anyhow::Result<()> {
 fn is_command_allowed(command: &str) -> bool {
     // Special case for shell activation
     if command == "shell-activation" {
+        return true;
+    }
+    
+    // Allow echo commands for retrieving individual variables
+    if command.starts_with("echo ") {
         return true;
     }
     
