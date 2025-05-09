@@ -28,17 +28,49 @@ vault-system/
 
 ## 🚀 Quick Start
 
-1. **Start the Master Server**:
+### 1. Start the Master Server:
 ```bash
 cd vaultd
 cargo run
 ```
 
-2. **Run a Command with Secrets**:
+### 2. Use VaultWrap in one of three ways:
+
+#### Option A: Run a command with environment variables:
+```bash
+./use-vault-env.sh python3 app.py
+```
+
+Copy the `use-vault-env.sh` script to any project directory, and use it to run commands with environment variables from the vault server.
+
+#### Option B: Activate the environment for your shell session:
+```bash
+source activate-vault.sh
+```
+
+This activates a vault environment in your current shell. You'll see a `(vault)` prefix in your prompt, and all commands in that shell will have access to the environment variables.
+
+To deactivate:
+```bash
+deactivate
+```
+
+#### Option C: Direct use of vaultwrap CLI:
 ```bash
 cd vaultwrap
 cargo run -- run python3 app.py
 ```
+
+## 🔍 How It Works
+
+1. **Central Server**: The vaultd server maintains a secure store of environment variables
+2. **Request Process**: When you run a command through VaultWrap, it:
+   - Connects to the vaultd server
+   - Authenticates and verifies command permissions
+   - Receives authorized environment variables
+   - Injects them into the specified command's process
+3. **Memory Safety**: Variables only exist in memory during execution
+4. **Command Completion**: When your command finishes, all variables are wiped from memory
 
 ## 🔒 Security Features
 
