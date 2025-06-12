@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
                                 let _ = socket.write_all(&out).await;
                                 return;
                             }
-                            let env_vars_vec = env_vars.unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                            let env_vars_vec: Vec<(String, String)> = env_vars.unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
                             
                             // Special handling for shell activation
                             if req.command == "shell-activation" {
@@ -145,6 +145,20 @@ fn load_environment_variables() -> HashMap<String, HashMap<String, String>> {
         println!("[vaultd] Loading environment variables from secrets.toml");
         if let Ok(toml_value) = config_content.parse::<Value>() {
             if let Some(table) = toml_value.as_table() {
+                // First, collect root-level variables (not in sections)
+                let mut root_vars = HashMap::new();
+                for (key, value) in table.iter() {
+                    if let Some(val) = value.as_str() {
+                        root_vars.insert(key.clone(), val.to_string());
+                    }
+                }
+                
+                // Add root variables to a "global" environment if any exist
+                if !root_vars.is_empty() {
+                    envs.insert("global".to_string(), root_vars);
+                }
+                
+                // Then process environment sections like [dev], [prod], etc.
                 for (env_name, env_vars) in table.iter() {
                     if let Some(vars_table) = env_vars.as_table() {
                         let mut vars = HashMap::new();
