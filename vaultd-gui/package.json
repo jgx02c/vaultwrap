@@ -1,0 +1,12 @@
+{
+  "name": "vaultd-gui",
+  "version": "0.1.0",
+  "description": "VaultWrap GUI for Environment Management",
+  "scripts": {
+    "build-css": "tailwindcss -i ./src/input.css -o ./src/styles.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "@tailwindcss/forms": "^0.5.7"
+  }
+} 

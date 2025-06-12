@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-full w-full">
   <head>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="styles.css" />
@@ -7,68 +7,305 @@
     <title>VaultWrap GUI</title>
   </head>
 
-  <body>
-    <div class="container">
-      <header>
-        <h1>🔐 VaultWrap Environment Manager</h1>
-        <p>Manage your environment configurations</p>
-      </header>
-
-      <div class="main-content">
-        <!-- Left Panel: Environment List -->
-        <div class="environments-panel">
-          <div class="panel-header">
-            <h2>Environments</h2>
-            <button id="refresh-btn" class="btn btn-small">🔄 Refresh</button>
+  <body class="h-full w-full">
+    <!-- Connection Screen -->
+    <div id="connection-screen" class="h-full w-full flex items-center justify-center p-6 min-h-screen min-w-0">
+      <div class="w-full max-w-md">
+        <!-- Logo/Header -->
+        <div class="text-center mb-8 animate-fade-in">
+          <div class="mx-auto w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mb-4 shadow-xl">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
           </div>
-          <div id="environments-list" class="environments-list">
-            <div class="loading">Loading environments...</div>
-          </div>
-          <button id="add-env-btn" class="btn btn-primary">+ Add Environment</button>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">VaultWrap</h1>
+          <p class="text-gray-600">Connect to your environment server</p>
         </div>
 
-        <!-- Right Panel: Environment Details -->
-        <div class="details-panel">
-          <div id="no-selection" class="no-selection">
-            <h3>Select an environment</h3>
-            <p>Choose an environment from the list to view and edit its variables</p>
-          </div>
-          
-          <div id="environment-details" class="environment-details" style="display: none;">
-            <div class="panel-header">
-              <h2 id="current-env-name">Environment Name</h2>
-              <div class="actions">
-                <button id="save-btn" class="btn btn-primary">💾 Save</button>
-                <button id="delete-env-btn" class="btn btn-danger">🗑️ Delete</button>
+        <!-- Connection Form -->
+        <div class="card p-8 animate-slide-up">
+          <form id="connection-form" class="space-y-6">
+            <div class="grid grid-cols-1 gap-6">
+              <!-- Server Address -->
+              <div>
+                <label for="server-host" class="block text-sm font-medium text-gray-700 mb-2">
+                  Server Address
+                </label>
+                <input
+                  type="text"
+                  id="server-host"
+                  value="127.0.0.1"
+                  placeholder="localhost or IP address"
+                  class="input"
+                  required
+                />
+              </div>
+
+              <!-- Port -->
+              <div>
+                <label for="server-port" class="block text-sm font-medium text-gray-700 mb-2">
+                  Port
+                </label>
+                <input
+                  type="number"
+                  id="server-port"
+                  value="4000"
+                  placeholder="4000"
+                  class="input"
+                  required
+                />
+              </div>
+
+              <!-- Username (Optional) -->
+              <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                  Username <span class="text-gray-400 text-xs">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  placeholder="Leave blank for anonymous"
+                  class="input"
+                />
+              </div>
+
+              <!-- Password (Optional) -->
+              <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                  Password <span class="text-gray-400 text-xs">(optional)</span>
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  placeholder="Leave blank for anonymous"
+                  class="input"
+                />
+              </div>
+
+              <!-- Remember Connection -->
+              <div class="flex items-center">
+                <input
+                  id="remember-connection"
+                  type="checkbox"
+                  class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label for="remember-connection" class="ml-2 block text-sm text-gray-700">
+                  Remember this connection
+                </label>
               </div>
             </div>
-            
-            <div class="variables-section">
-              <h3>Environment Variables</h3>
-              <div id="variables-list" class="variables-list">
-                <!-- Variables will be loaded here -->
-              </div>
-              <button id="add-var-btn" class="btn btn-secondary">+ Add Variable</button>
+
+            <!-- Connection Status -->
+            <div id="connection-status" class="hidden">
+              <!-- Will be populated by JavaScript -->
             </div>
+
+            <!-- Connect Button -->
+            <button
+              type="submit"
+              id="connect-btn"
+              class="btn btn-primary w-full py-3 text-base font-semibold"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Connect to Server
+            </button>
+          </form>
+        </div>
+
+        <!-- Quick Connect Options -->
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-500 mb-3">Quick Connect</p>
+          <div class="flex justify-center space-x-2">
+            <button class="btn btn-secondary text-xs px-3 py-1" onclick="setQuickConnect('localhost', 4000)">
+              Local Server
+            </button>
+            <button class="btn btn-secondary text-xs px-3 py-1" onclick="setQuickConnect('vault.mycompany.com', 4000)">
+              Remote Server
+            </button>
           </div>
         </div>
-      </div>
-
-      <!-- Status Bar -->
-      <div id="status-bar" class="status-bar">
-        <span id="status-text">Ready</span>
       </div>
     </div>
 
-    <!-- Modal for adding new environment -->
-    <div id="new-env-modal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <h3>Create New Environment</h3>
-        <input type="text" id="new-env-name" placeholder="Environment name (e.g., 'production')" />
-        <div class="modal-actions">
-          <button id="create-env-btn" class="btn btn-primary">Create</button>
-          <button id="cancel-env-btn" class="btn btn-secondary">Cancel</button>
+    <!-- Main Application -->
+    <div id="main-app" class="hidden h-full w-full flex flex-col min-h-0 min-w-0">
+      <!-- Top Navigation -->
+      <nav class="bg-white/80 backdrop-blur-lg border-b border-gray-200 px-6 py-4 shadow-sm flex-shrink-0">
+        <div class="flex items-center justify-between min-w-0">
+          <div class="flex items-center space-x-4 min-w-0">
+            <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h1 class="text-xl font-semibold text-gray-900 truncate">VaultWrap</h1>
+          </div>
+          
+          <div class="flex items-center space-x-4 min-w-0">
+            <!-- Connection Status -->
+            <div class="flex items-center space-x-2 text-sm min-w-0">
+              <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span class="text-gray-600 truncate">Connected to <span id="connected-server" class="font-mono text-primary-600">localhost:4000</span></span>
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex items-center space-x-2 min-w-0">
+              <button id="refresh-btn" class="btn btn-secondary text-sm px-3 py-2">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+              <button id="disconnect-btn" class="btn btn-secondary text-sm px-3 py-2">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Disconnect
+              </button>
+            </div>
+          </div>
         </div>
+      </nav>
+
+      <!-- Main Content -->
+      <div class="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+        <!-- Sidebar - Environments -->
+        <div class="w-80 max-w-xs min-w-[12rem] bg-white border-r border-gray-200 flex flex-col min-h-0 min-w-0">
+          <div class="p-6 border-b border-gray-200 flex-shrink-0">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-900">Environments</h2>
+              <button id="add-env-btn" class="btn btn-primary text-sm px-3 py-2">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Environment
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex-1 overflow-y-auto p-6 min-h-0 min-w-0">
+            <div id="environments-list" class="space-y-3 min-w-0">
+              <div class="flex items-center justify-center py-12 text-gray-500">
+                <div class="text-center">
+                  <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <p class="text-sm">Loading environments...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col bg-gray-50 min-h-0 min-w-0 overflow-auto">
+          <!-- No Selection State -->
+          <div id="no-selection" class="flex-1 flex items-center justify-center min-h-0 min-w-0">
+            <div class="text-center">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Select an Environment</h3>
+              <p class="text-gray-600 mb-6 max-w-sm">Choose an environment from the sidebar to view and manage its variables</p>
+              <button id="add-env-from-empty" class="btn btn-primary">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Create Your First Environment
+              </button>
+            </div>
+          </div>
+
+          <!-- Environment Details -->
+          <div id="environment-details" class="hidden flex-1 flex flex-col min-h-0 min-w-0">
+            <!-- Environment Header -->
+            <div class="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+              <div class="flex items-center justify-between min-w-0">
+                <div class="flex items-center space-x-3 min-w-0">
+                  <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <div class="min-w-0">
+                    <h2 id="current-env-name" class="text-xl font-semibold text-gray-900 truncate">Environment Name</h2>
+                    <p class="text-sm text-gray-500 truncate">Manage environment variables</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-center space-x-3 min-w-0">
+                  <button id="save-btn" class="btn btn-primary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Save Changes
+                  </button>
+                  <button id="delete-env-btn" class="btn btn-danger">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Environment
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Variables Section -->
+            <div class="flex-1 p-6 overflow-y-auto min-h-0 min-w-0">
+              <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-medium text-gray-900">Environment Variables</h3>
+                  <button id="add-var-btn" class="btn btn-secondary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Variable
+                  </button>
+                </div>
+                
+                <div id="variables-list" class="space-y-3 min-w-0">
+                  <!-- Variables will be populated here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for New Environment -->
+    <div id="new-env-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50 min-h-0 min-w-0">
+      <div class="card p-8 w-full max-w-md animate-slide-up min-w-0">
+        <h3 class="text-xl font-semibold text-gray-900 mb-6">Create New Environment</h3>
+        <form id="new-env-form">
+          <div class="mb-6">
+            <label for="new-env-name" class="block text-sm font-medium text-gray-700 mb-2">
+              Environment Name
+            </label>
+            <input
+              type="text"
+              id="new-env-name"
+              placeholder="e.g., production, staging, development"
+              class="input"
+              required
+            />
+            <p class="text-xs text-gray-500 mt-2">Choose a descriptive name for your environment</p>
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button type="button" id="cancel-env-btn" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" id="create-env-btn" class="btn btn-primary">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Create Environment
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
