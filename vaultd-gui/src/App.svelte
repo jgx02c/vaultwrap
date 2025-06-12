@@ -99,6 +99,20 @@
     environmentVariables[newKey] = '';
     environmentVariables = { ...environmentVariables };
   }
+
+  async function deleteEnvironment(envName) {
+    try {
+      await invoke('delete_environment', { envName });
+      await loadEnvironments();
+      if (currentEnvironment === envName) {
+        currentEnvironment = null;
+        environmentVariables = {};
+      }
+    } catch (error) {
+      console.error('Failed to delete environment:', error);
+      throw error;
+    }
+  }
 </script>
 
 <main class="h-full w-full">
@@ -120,6 +134,7 @@
       onUpdateVariable={updateVariable}
       onDeleteVariable={deleteVariable}
       onAddVariable={addVariable}
+      onDeleteEnvironment={deleteEnvironment}
     />
   {/if}
 </main> 

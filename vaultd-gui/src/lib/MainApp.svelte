@@ -10,11 +10,15 @@
   export let onUpdateVariable;
   export let onDeleteVariable;
   export let onAddVariable;
+  export let onDeleteEnvironment;
 
   let showNewEnvModal = false;
   let newEnvName = '';
   let saveStatus = '';
   let loading = false;
+  let showDeleteConfirm = false;
+  let envToDelete = null;
+  let deleteStatus = '';
 
   async function handleRefresh() {
     loading = true;
@@ -63,6 +67,33 @@
 
   function updateVariableValue(key, value) {
     onUpdateVariable(key, key, value);
+  }
+
+  async function handleDeleteEnvironment(env) {
+    showDeleteConfirm = true;
+    envToDelete = env;
+  }
+
+  async function confirmDeleteEnvironment() {
+    if (!envToDelete) return;
+    try {
+      await onDeleteEnvironment(envToDelete);
+      deleteStatus = 'Environment deleted!';
+      setTimeout(() => deleteStatus = '', 2000);
+      if (envToDelete === currentEnvironment) {
+        await onSelectEnvironment(null);
+      }
+      envToDelete = null;
+      showDeleteConfirm = false;
+    } catch (error) {
+      deleteStatus = `Delete failed: ${error}`;
+      setTimeout(() => deleteStatus = '', 3000);
+    }
+  }
+
+  function cancelDeleteEnvironment() {
+    showDeleteConfirm = false;
+    envToDelete = null;
   }
 </script>
 
@@ -137,22 +168,33 @@
         {:else}
           <div class="space-y-2">
             {#each environments as env}
-              <button
-                on:click={() => onSelectEnvironment(env)}
-                class="w-full text-left p-3 rounded-lg border transition-all duration-200 {env === currentEnvironment ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'}"
-              >
-                <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
+              <div class="flex items-center group">
+                <button
+                  on:click={() => onSelectEnvironment(env)}
+                  class="flex-1 text-left p-3 rounded-lg border transition-all duration-200 {env === currentEnvironment ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'}"
+                >
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="font-medium text-gray-900 truncate">{env}</p>
+                      <p class="text-sm text-gray-500">Environment</p>
+                    </div>
                   </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="font-medium text-gray-900 truncate">{env}</p>
-                    <p class="text-sm text-gray-500">Environment</p>
-                  </div>
-                </div>
-              </button>
+                </button>
+                <button
+                  class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity btn btn-danger px-2 py-1"
+                  title="Delete environment"
+                  on:click={() => handleDeleteEnvironment(env)}
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             {/each}
           </div>
         {/if}
@@ -317,5 +359,30 @@
         </div>
       </form>
     </div>
+  </div>
+{/if}
+
+<!-- Delete Environment Confirmation Modal -->
+{#if showDeleteConfirm}
+  <div class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-content" role="document">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Delete Environment</h3>
+      <p class="mb-4">Are you sure you want to delete the environment <span class="font-bold">{envToDelete}</span>? This action cannot be undone.</p>
+      <div class="flex justify-end space-x-3">
+        <button type="button" on:click={cancelDeleteEnvironment} class="btn btn-secondary px-4 py-2">
+          Cancel
+        </button>
+        <button type="button" on:click={confirmDeleteEnvironment} class="btn btn-danger px-4 py-2">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Status Notification -->
+{#if deleteStatus}
+  <div class="fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg shadow-lg px-4 py-2 text-sm {deleteStatus.includes('failed') ? 'text-red-600' : 'text-green-600'}">
+    {deleteStatus}
   </div>
 {/if} 
