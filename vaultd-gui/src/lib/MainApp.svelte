@@ -259,7 +259,7 @@
                 </button>
               </div>
             {:else}
-              <div class="divide-y divide-gray-200">
+              <div class="divide-y divide-gray-200 max-h-96 overflow-y-auto mb-4">
                 {#each Object.entries(environmentVariables) as [key, value]}
                   <div class="flex items-center py-3 group hover:bg-gray-50 transition">
                     <button 
@@ -291,6 +291,14 @@
                     />
                   </div>
                 {/each}
+              </div>
+              <div class="flex justify-center">
+                <button on:click={onAddVariable} class="btn btn-primary px-4 py-2 flex items-center">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add Variable
+                </button>
               </div>
             {/if}
           </div>

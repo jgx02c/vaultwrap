@@ -222,6 +222,7 @@ async fn main() -> anyhow::Result<()> {
                                         let _ = socket.write_all(&out).await;
                                     },
                                     Err(e) => {
+                                        println!("[vaultd] Failed to create environment '{}': {}", env_name, e);
                                         let environments = {
                                             let envs_guard = envs.lock().await;
                                             envs_guard.keys().cloned().collect()
