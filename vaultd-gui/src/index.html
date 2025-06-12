@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VaultWrap GUI</title>
+  </head>
+
+  <body>
+    <div class="container">
+      <header>
+        <h1>🔐 VaultWrap Environment Manager</h1>
+        <p>Manage your environment configurations</p>
+      </header>
+
+      <div class="main-content">
+        <!-- Left Panel: Environment List -->
+        <div class="environments-panel">
+          <div class="panel-header">
+            <h2>Environments</h2>
+            <button id="refresh-btn" class="btn btn-small">🔄 Refresh</button>
+          </div>
+          <div id="environments-list" class="environments-list">
+            <div class="loading">Loading environments...</div>
+          </div>
+          <button id="add-env-btn" class="btn btn-primary">+ Add Environment</button>
+        </div>
+
+        <!-- Right Panel: Environment Details -->
+        <div class="details-panel">
+          <div id="no-selection" class="no-selection">
+            <h3>Select an environment</h3>
+            <p>Choose an environment from the list to view and edit its variables</p>
+          </div>
+          
+          <div id="environment-details" class="environment-details" style="display: none;">
+            <div class="panel-header">
+              <h2 id="current-env-name">Environment Name</h2>
+              <div class="actions">
+                <button id="save-btn" class="btn btn-primary">💾 Save</button>
+                <button id="delete-env-btn" class="btn btn-danger">🗑️ Delete</button>
+              </div>
+            </div>
+            
+            <div class="variables-section">
+              <h3>Environment Variables</h3>
+              <div id="variables-list" class="variables-list">
+                <!-- Variables will be loaded here -->
+              </div>
+              <button id="add-var-btn" class="btn btn-secondary">+ Add Variable</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div id="status-bar" class="status-bar">
+        <span id="status-text">Ready</span>
+      </div>
+    </div>
+
+    <!-- Modal for adding new environment -->
+    <div id="new-env-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h3>Create New Environment</h3>
+        <input type="text" id="new-env-name" placeholder="Environment name (e.g., 'production')" />
+        <div class="modal-actions">
+          <button id="create-env-btn" class="btn btn-primary">Create</button>
+          <button id="cancel-env-btn" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

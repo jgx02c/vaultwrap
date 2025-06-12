@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct SecretRequest {
     pub client_id: String,
     pub command: String,
+    pub environment: Option<String>, // New: specify which environment to use
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -16,6 +17,7 @@ pub struct SecretResponse {
     pub success: bool,
     pub env_vars: Option<Vec<(String, String)>>, // key-value pairs
     pub message: Option<String>,
+    pub environments: Option<Vec<String>>, // New: list of available environments (for listing)
 }
 
 //We're using serde for serialization + bincode or json for sending data across the wire.
