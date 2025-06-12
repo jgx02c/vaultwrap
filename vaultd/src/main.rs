@@ -3,6 +3,9 @@ use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::collections::HashMap;
 use toml::Value;
+use std::fs;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -10,13 +13,12 @@ async fn main() -> anyhow::Result<()> {
     println!("[vaultd] Vault server listening on port 4000...");
     println!("[vaultd] Ready to serve environment variables on demand");
 
-    // Load our environment variables
-    // In a real implementation, this would be loaded from an encrypted file
-    let envs = load_environment_variables();
+    // Load our environment variables into shared state
+    let envs = Arc::new(Mutex::new(load_environment_variables()));
 
     loop {
         let (mut socket, addr) = listener.accept().await?;
-        let envs = envs.clone();
+        let envs = Arc::clone(&envs);
 
         tokio::spawn(async move {
             println!("[vaultd] New connection from: {}", addr);
@@ -31,32 +33,104 @@ async fn main() -> anyhow::Result<()> {
                             
                             // Handle list-environments command
                             if req.command == "list-environments" {
+                                let environments = {
+                                    let envs_guard = envs.lock().await;
+                                    envs_guard.keys().cloned().collect()
+                                };
                                 let response = SecretResponse {
                                     success: true,
                                     env_vars: None,
                                     message: None,
-                                    environments: Some(envs.keys().cloned().collect()),
+                                    environments: Some(environments),
                                 };
                                 let out = serde_json::to_vec(&response).unwrap();
                                 let _ = socket.write_all(&out).await;
                                 return;
                             }
 
-                            // Determine which environment to use
-                            let env_name = req.environment.as_deref().unwrap_or("dev");
-                            let env_vars = envs.get(env_name);
-                            if env_vars.is_none() {
-                                let response = SecretResponse {
-                                    success: false,
-                                    env_vars: None,
-                                    message: Some(format!("Environment '{}' not found", env_name)),
-                                    environments: Some(envs.keys().cloned().collect()),
-                                };
-                                let out = serde_json::to_vec(&response).unwrap();
-                                let _ = socket.write_all(&out).await;
+                            // Handle save-environment command
+                            if req.command == "save-environment" {
+                                let env_name = req.environment.as_deref().unwrap_or("dev");
+                                
+                                if let Some(variables) = req.variables {
+                                    println!("[vaultd] Saving {} variables to environment '{}'", variables.len(), env_name);
+                                    
+                                    match save_environment_variables(env_name, variables).await {
+                                        Ok(_) => {
+                                            println!("[vaultd] Successfully saved environment '{}'", env_name);
+                                            
+                                            // Reload environment variables after save
+                                            println!("[vaultd] Reloading environment variables from secrets.toml");
+                                            let environments = {
+                                                let mut envs_guard = envs.lock().await;
+                                                *envs_guard = load_environment_variables();
+                                                envs_guard.keys().cloned().collect()
+                                            };
+                                            
+                                            let response = SecretResponse {
+                                                success: true,
+                                                env_vars: None,
+                                                message: Some(format!("Environment '{}' saved successfully", env_name)),
+                                                environments: Some(environments),
+                                            };
+                                            let out = serde_json::to_vec(&response).unwrap();
+                                            let _ = socket.write_all(&out).await;
+                                        },
+                                        Err(e) => {
+                                            println!("[vaultd] Failed to save environment '{}': {}", env_name, e);
+                                            let environments = {
+                                                let envs_guard = envs.lock().await;
+                                                envs_guard.keys().cloned().collect()
+                                            };
+                                            let response = SecretResponse {
+                                                success: false,
+                                                env_vars: None,
+                                                message: Some(format!("Failed to save environment '{}': {}", env_name, e)),
+                                                environments: Some(environments),
+                                            };
+                                            let out = serde_json::to_vec(&response).unwrap();
+                                            let _ = socket.write_all(&out).await;
+                                        }
+                                    }
+                                } else {
+                                    let environments = {
+                                        let envs_guard = envs.lock().await;
+                                        envs_guard.keys().cloned().collect()
+                                    };
+                                    let response = SecretResponse {
+                                        success: false,
+                                        env_vars: None,
+                                        message: Some("No variables provided for save operation".to_string()),
+                                        environments: Some(environments),
+                                    };
+                                    let out = serde_json::to_vec(&response).unwrap();
+                                    let _ = socket.write_all(&out).await;
+                                }
                                 return;
                             }
-                            let env_vars_vec: Vec<(String, String)> = env_vars.unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+
+                            // Determine which environment to use
+                            let env_name = req.environment.as_deref().unwrap_or("dev");
+                            let (env_vars_vec, environments) = {
+                                let envs_guard = envs.lock().await;
+                                let env_vars = envs_guard.get(env_name);
+                                if env_vars.is_none() {
+                                    let environments = envs_guard.keys().cloned().collect();
+                                    drop(envs_guard);
+                                    let response = SecretResponse {
+                                        success: false,
+                                        env_vars: None,
+                                        message: Some(format!("Environment '{}' not found", env_name)),
+                                        environments: Some(environments),
+                                    };
+                                    let out = serde_json::to_vec(&response).unwrap();
+                                    let _ = socket.write_all(&out).await;
+                                    return;
+                                }
+                                let env_vars_vec: Vec<(String, String)> = env_vars.unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                                let environments = envs_guard.keys().cloned().collect();
+                                (env_vars_vec, environments)
+                            };
                             
                             // Special handling for shell activation
                             if req.command == "shell-activation" {
@@ -65,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
                                     success: true,
                                     env_vars: Some(env_vars_vec.clone()),
                                     message: None,
-                                    environments: Some(envs.keys().cloned().collect()),
+                                    environments: Some(environments),
                                 };
                                 let out = serde_json::to_vec(&response).unwrap();
                                 let _ = socket.write_all(&out).await;
@@ -78,7 +152,7 @@ async fn main() -> anyhow::Result<()> {
                                     success: true,
                                     env_vars: Some(env_vars_vec.clone()),
                                     message: None,
-                                    environments: Some(envs.keys().cloned().collect()),
+                                    environments: Some(environments),
                                 };
                                 
                                 println!("[vaultd] Authorized - sending {} environment variables for environment '{}'", env_vars_vec.len(), env_name);
@@ -90,7 +164,7 @@ async fn main() -> anyhow::Result<()> {
                                     success: false,
                                     env_vars: None,
                                     message: Some(format!("Unauthorized command: {}", req.command)),
-                                    environments: Some(envs.keys().cloned().collect()),
+                                    environments: Some(environments),
                                 };
                                 
                                 println!("[vaultd] Unauthorized command: {}", req.command);
@@ -174,4 +248,27 @@ fn load_environment_variables() -> HashMap<String, HashMap<String, String>> {
         }
     }
     envs
+}
+
+async fn save_environment_variables(env_name: &str, variables: HashMap<String, String>) -> anyhow::Result<()> {
+    // Read the current secrets.toml file
+    let config_content = fs::read_to_string("secrets.toml")?;
+    let mut toml_value: Value = config_content.parse()?;
+    
+    // Update the specific environment section
+    if let Some(table) = toml_value.as_table_mut() {
+        // Insert or update the environment section
+        let mut env_table = toml::map::Map::new();
+        for (key, value) in variables {
+            env_table.insert(key, Value::String(value));
+        }
+        table.insert(env_name.to_string(), Value::Table(env_table));
+    }
+    
+    // Write back to file
+    let toml_content = toml::to_string(&toml_value)?;
+    fs::write("secrets.toml", toml_content)?;
+    
+    println!("[vaultd] Updated secrets.toml with environment '{}'", env_name);
+    Ok(())
 }

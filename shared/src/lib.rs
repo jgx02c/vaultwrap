@@ -4,12 +4,14 @@ pub fn add(left: u64, right: u64) -> u64 {
 
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SecretRequest {
     pub client_id: String,
     pub command: String,
     pub environment: Option<String>, // New: specify which environment to use
+    pub variables: Option<HashMap<String, String>>, // New: for save operations
 }
 
 #[derive(Serialize, Deserialize, Debug)]

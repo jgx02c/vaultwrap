@@ -104,9 +104,21 @@ async fn get_environment(env_name: String) -> Result<HashMap<String, String>, St
 // Tauri command to save environments (this will require extending the server protocol)
 #[tauri::command]
 async fn save_environment(env_name: String, variables: HashMap<String, String>) -> Result<String, String> {
-    // For now, we'll return a placeholder since we need to extend the server protocol
-    // to support saving environments
-    Ok(format!("Saving environment '{}' with {} variables (not yet implemented in server)", env_name, variables.len()))
+    let config = {
+        let server_config = SERVER_CONFIG.lock().unwrap();
+        server_config.as_ref().ok_or("No server configuration set")?.clone()
+    };
+    
+    match send_save_request(&env_name, variables, &config).await {
+        Ok(response) => {
+            if response.success {
+                Ok(response.message.unwrap_or(format!("Environment '{}' saved successfully", env_name)))
+            } else {
+                Err(response.message.unwrap_or("Failed to save environment".to_string()))
+            }
+        }
+        Err(e) => Err(format!("Network error: {}", e))
+    }
 }
 
 // Helper function to send requests to vaultd server with specific config
@@ -118,6 +130,29 @@ async fn send_request_with_config(command: &str, environment: Option<String>, co
         client_id: "vaultd-gui".to_string(),
         command: command.to_string(),
         environment,
+        variables: None,
+    };
+    
+    let request_json = serde_json::to_vec(&request)?;
+    stream.write_all(&request_json).await?;
+    
+    let mut response_buf = vec![0; 4096];
+    let n = stream.read(&mut response_buf).await?;
+    
+    let response: SecretResponse = serde_json::from_slice(&response_buf[..n])?;
+    Ok(response)
+}
+
+// Helper function to send save requests to vaultd server
+async fn send_save_request(env_name: &str, variables: HashMap<String, String>, config: &ServerConfig) -> Result<SecretResponse, Box<dyn std::error::Error>> {
+    let address = format!("{}:{}", config.host, config.port);
+    let mut stream = TcpStream::connect(&address).await?;
+    
+    let request = SecretRequest {
+        client_id: "vaultd-gui".to_string(),
+        command: "save-environment".to_string(),
+        environment: Some(env_name.to_string()),
+        variables: Some(variables),
     };
     
     let request_json = serde_json::to_vec(&request)?;
