@@ -11,10 +11,10 @@
   export let onDeleteVariable;
   export let onAddVariable;
   export let onDeleteEnvironment;
+  export let onCreateEnvironment;
 
   let showNewEnvModal = false;
   let newEnvName = '';
-  let saveStatus = '';
   let loading = false;
   let showDeleteConfirm = false;
   let envToDelete = null;
@@ -31,26 +31,20 @@
     }
   }
 
-  async function handleSave() {
-    try {
-      await onSaveEnvironment();
-      saveStatus = 'Saved successfully!';
-      setTimeout(() => saveStatus = '', 2000);
-    } catch (error) {
-      saveStatus = `Save failed: ${error}`;
-      setTimeout(() => saveStatus = '', 3000);
-    }
+  function openNewEnvModal() {
+    newEnvName = '';
+    showNewEnvModal = true;
   }
 
   async function createEnvironment() {
     if (!newEnvName.trim()) return;
-    
-    // For now, just add to list and select it
-    // TODO: Implement backend creation
-    environments = [...environments, newEnvName.trim()];
-    await onSelectEnvironment(newEnvName.trim());
-    showNewEnvModal = false;
-    newEnvName = '';
+    try {
+      await onCreateEnvironment(newEnvName.trim());
+      showNewEnvModal = false;
+      newEnvName = '';
+    } catch (error) {
+      // Toast handled in parent
+    }
   }
 
   function handleDisconnect() {
@@ -141,22 +135,20 @@
   <div class="flex-1 flex min-h-0">
     <!-- Sidebar -->
     <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
-      <div class="p-4 border-b border-gray-200">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-medium text-gray-900">Environments</h2>
-          <button 
-            on:click={() => showNewEnvModal = true}
-            class="btn btn-primary px-3 py-2"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            New
-          </button>
-        </div>
+      <div class="px-6 py-4 flex items-center justify-between border-b border-gray-200">
+        <h2 class="text-lg font-medium text-gray-900">Environments</h2>
+        <button 
+          on:click={openNewEnvModal}
+          class="btn btn-primary h-10 flex items-center justify-center px-4"
+          style="min-width: 2.5rem;"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span class="sr-only">New</span>
+        </button>
       </div>
-      
-      <div class="flex-1 overflow-y-auto p-4">
+      <div class="flex-1 overflow-y-auto px-2 py-4">
         {#if environments.length === 0}
           <div class="text-center py-12">
             <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,35 +158,24 @@
             <p class="text-sm text-gray-400">Create your first environment to get started</p>
           </div>
         {:else}
-          <div class="space-y-2">
+          <div class="space-y-1">
             {#each environments as env}
-              <div class="flex items-center group">
-                <button
-                  on:click={() => onSelectEnvironment(env)}
-                  class="flex-1 text-left p-3 rounded-lg border transition-all duration-200 {env === currentEnvironment ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'}"
-                >
-                  <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <p class="font-medium text-gray-900 truncate">{env}</p>
-                      <p class="text-sm text-gray-500">Environment</p>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity btn btn-danger px-2 py-1"
-                  title="Delete environment"
-                  on:click={() => handleDeleteEnvironment(env)}
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <button
+                on:click={() => onSelectEnvironment(env)}
+                class="w-full flex items-center px-3 py-2 rounded-lg transition-all duration-200
+                  {env === currentEnvironment ? 'bg-blue-50 border border-blue-500 font-semibold text-blue-700 shadow-sm' : 'bg-white border border-transparent hover:bg-gray-50 text-gray-900'}"
+                style="min-height: 2.5rem;"
+              >
+                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-3">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
-                </button>
-              </div>
+                </div>
+                <div class="min-w-0 flex-1 text-left">
+                  <p class="truncate">{env}</p>
+                  <p class="text-xs text-gray-500">Environment</p>
+                </div>
+              </button>
             {/each}
           </div>
         {/if}
@@ -212,7 +193,7 @@
             <h3 class="text-xl font-medium text-gray-900 mb-2">Select an Environment</h3>
             <p class="text-gray-500 mb-6">Choose an environment from the sidebar to view and manage its variables</p>
             <button 
-              on:click={() => showNewEnvModal = true}
+              on:click={openNewEnvModal}
               class="btn btn-primary px-4 py-2"
             >
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,15 +222,9 @@
               </div>
               
               <div class="flex items-center space-x-3">
-                {#if saveStatus}
-                  <span class="text-sm {saveStatus.includes('failed') ? 'text-red-600' : 'text-green-600'}">{saveStatus}</span>
+                {#if deleteStatus}
+                  <span class="text-sm {deleteStatus.includes('failed') ? 'text-red-600' : 'text-green-600'}">{deleteStatus}</span>
                 {/if}
-                <button on:click={handleSave} class="btn btn-primary px-4 py-2">
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                  </svg>
-                  Save Changes
-                </button>
               </div>
             </div>
           </div>
@@ -258,11 +233,15 @@
           <div class="flex-1 p-6 overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-lg font-medium text-gray-900">Environment Variables</h3>
-              <button on:click={onAddVariable} class="btn btn-secondary px-4 py-2">
+              <button
+                on:click={() => handleDeleteEnvironment(currentEnvironment)}
+                class="btn btn-danger px-4 py-2 flex items-center"
+                title="Delete Environment"
+              >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Add Variable
+                Delete Environment
               </button>
             </div>
             
@@ -280,44 +259,36 @@
                 </button>
               </div>
             {:else}
-              <div class="space-y-4">
+              <div class="divide-y divide-gray-200">
                 {#each Object.entries(environmentVariables) as [key, value]}
-                  <div class="card p-4">
-                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <div>
-                         <label for="var-key-{key}" class="block text-sm font-medium text-gray-700 mb-2">Variable Name</label>
-                         <input
-                           id="var-key-{key}"
-                           type="text"
-                           value={key}
-                           on:input={(e) => updateVariableKey(key, e.target.value)}
-                           class="input font-mono"
-                           placeholder="VARIABLE_NAME"
-                         />
-                       </div>
-                       <div>
-                         <label for="var-value-{key}" class="block text-sm font-medium text-gray-700 mb-2">Value</label>
-                         <input
-                           id="var-value-{key}"
-                           type="text"
-                           value={value}
-                           on:input={(e) => updateVariableValue(key, e.target.value)}
-                           class="input font-mono"
-                           placeholder="variable_value"
-                         />
-                       </div>
-                     </div>
-                    <div class="flex justify-end mt-4">
-                      <button 
-                        on:click={() => onDeleteVariable(key)}
-                        class="btn btn-danger px-3 py-2"
-                      >
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Delete
-                      </button>
-                    </div>
+                  <div class="flex items-center py-3 group hover:bg-gray-50 transition">
+                    <button 
+                      on:click={() => onDeleteVariable(key)}
+                      class="btn btn-icon btn-danger mr-3 opacity-70 group-hover:opacity-100 focus:opacity-100"
+                      title="Delete variable"
+                      style="padding: 0.25rem 0.5rem;"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                    <input
+                      id="var-key-{key}"
+                      type="text"
+                      value={key}
+                      on:input={(e) => updateVariableKey(key, e.target.value)}
+                      class="input font-mono flex-1 mr-4 min-w-0"
+                      placeholder="VARIABLE_NAME"
+                      style="max-width: 200px;"
+                    />
+                    <input
+                      id="var-value-{key}"
+                      type="text"
+                      value={value}
+                      on:input={(e) => updateVariableValue(key, e.target.value)}
+                      class="input font-mono flex-1 min-w-0"
+                      placeholder="variable_value"
+                    />
                   </div>
                 {/each}
               </div>
@@ -334,7 +305,7 @@
   <div class="modal-overlay" role="dialog" aria-modal="true" on:click={() => showNewEnvModal = false} on:keydown={(e) => e.key === 'Escape' && (showNewEnvModal = false)}>
     <div class="modal-content" role="document" on:click|stopPropagation>
       <h3 class="text-lg font-medium text-gray-900 mb-4">Create New Environment</h3>
-      <form on:submit|preventDefault={createEnvironment}>
+      <form on:submit|preventDefault={createEnvironment} autocomplete="off">
         <div class="mb-4">
           <label for="new-env-name" class="block text-sm font-medium text-gray-700 mb-2">
             Environment Name
@@ -346,11 +317,11 @@
             placeholder="e.g., production, staging, development"
             class="input"
             required
+            autocomplete="off"
           />
         </div>
-        
         <div class="flex justify-end space-x-3">
-          <button type="button" on:click={() => showNewEnvModal = false} class="btn btn-secondary px-4 py-2">
+          <button type="button" on:click={() => { showNewEnvModal = false; newEnvName = ''; }} class="btn btn-secondary px-4 py-2">
             Cancel
           </button>
           <button type="submit" class="btn btn-primary px-4 py-2">

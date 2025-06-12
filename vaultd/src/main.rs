@@ -164,6 +164,81 @@ async fn main() -> anyhow::Result<()> {
                                 return;
                             }
 
+                            // Handle create-environment command
+                            if req.command == "create-environment" {
+                                let env_name = req.environment.as_deref().unwrap_or("");
+                                if env_name.is_empty() {
+                                    let environments = {
+                                        let envs_guard = envs.lock().await;
+                                        envs_guard.keys().cloned().collect()
+                                    };
+                                    let response = SecretResponse {
+                                        success: false,
+                                        env_vars: None,
+                                        message: Some("No environment name provided for create operation".to_string()),
+                                        environments: Some(environments),
+                                    };
+                                    let out = serde_json::to_vec(&response).unwrap();
+                                    let _ = socket.write_all(&out).await;
+                                    return;
+                                }
+                                // Check if environment already exists
+                                let exists = {
+                                    let envs_guard = envs.lock().await;
+                                    envs_guard.contains_key(env_name)
+                                };
+                                if exists {
+                                    let environments = {
+                                        let envs_guard = envs.lock().await;
+                                        envs_guard.keys().cloned().collect()
+                                    };
+                                    let response = SecretResponse {
+                                        success: false,
+                                        env_vars: None,
+                                        message: Some(format!("Environment '{}' already exists", env_name)),
+                                        environments: Some(environments),
+                                    };
+                                    let out = serde_json::to_vec(&response).unwrap();
+                                    let _ = socket.write_all(&out).await;
+                                    return;
+                                }
+                                match create_environment_section(env_name).await {
+                                    Ok(_) => {
+                                        println!("[vaultd] Created environment '{}' in secrets.toml", env_name);
+                                        // Reload environment variables after create
+                                        println!("[vaultd] Reloading environment variables from secrets.toml");
+                                        let environments = {
+                                            let mut envs_guard = envs.lock().await;
+                                            *envs_guard = load_environment_variables();
+                                            envs_guard.keys().cloned().collect()
+                                        };
+                                        let response = SecretResponse {
+                                            success: true,
+                                            env_vars: None,
+                                            message: Some(format!("Environment '{}' created successfully", env_name)),
+                                            environments: Some(environments),
+                                        };
+                                        let out = serde_json::to_vec(&response).unwrap();
+                                        let _ = socket.write_all(&out).await;
+                                    },
+                                    Err(e) => {
+                                        let environments = {
+                                            let envs_guard = envs.lock().await;
+                                            envs_guard.keys().cloned().collect()
+                                        };
+                                        let response = SecretResponse {
+                                            success: false,
+                                            env_vars: None,
+                                            message: Some(format!("Failed to create environment '{}': {}", env_name, e)),
+                                            environments: Some(environments),
+                                        };
+                                        let out = serde_json::to_vec(&response).unwrap();
+                                        let _ = socket.write_all(&out).await;
+                                    }
+                                }
+                                return;
+                            }
+
                             // Determine which environment to use
                             let env_name = req.environment.as_deref().unwrap_or("dev");
                             let (env_vars_vec, environments) = {
@@ -333,6 +408,18 @@ async fn delete_environment_section(env_name: &str) -> anyhow::Result<()> {
     let mut toml_value: Value = config_content.parse()?;
     if let Some(table) = toml_value.as_table_mut() {
         table.remove(env_name);
+    }
+    let toml_content = toml::to_string(&toml_value)?;
+    fs::write("secrets.toml", toml_content)?;
+    Ok(())
+}
+
+async fn create_environment_section(env_name: &str) -> anyhow::Result<()> {
+    let config_content = fs::read_to_string("secrets.toml")?;
+    let mut toml_value: Value = config_content.parse()?;
+    if let Some(table) = toml_value.as_table_mut() {
+        let mut env_table = toml::map::Map::new();
+        table.insert(env_name.to_string(), Value::Table(env_table));
     }
     let toml_content = toml::to_string(&toml_value)?;
     fs::write("secrets.toml", toml_content)?;

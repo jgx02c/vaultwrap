@@ -140,6 +140,25 @@ async fn delete_environment(env_name: String) -> Result<String, String> {
     }
 }
 
+// Tauri command to create an environment
+#[tauri::command]
+async fn create_environment(env_name: String) -> Result<String, String> {
+    let config = {
+        let server_config = SERVER_CONFIG.lock().unwrap();
+        server_config.as_ref().ok_or("No server configuration set")?.clone()
+    };
+    match send_create_request(&env_name, &config).await {
+        Ok(response) => {
+            if response.success {
+                Ok(response.message.unwrap_or(format!("Environment '{}' created successfully", env_name)))
+            } else {
+                Err(response.message.unwrap_or("Failed to create environment".to_string()))
+            }
+        }
+        Err(e) => Err(format!("Network error: {}", e))
+    }
+}
+
 // Helper function to send requests to vaultd server with specific config
 async fn send_request_with_config(command: &str, environment: Option<String>, config: &ServerConfig) -> Result<SecretResponse, Box<dyn std::error::Error>> {
     let address = format!("{}:{}", config.host, config.port);
@@ -202,6 +221,24 @@ async fn send_delete_request(env_name: &str, config: &ServerConfig) -> Result<Se
     Ok(response)
 }
 
+// Helper function to send create requests to vaultd server
+async fn send_create_request(env_name: &str, config: &ServerConfig) -> Result<SecretResponse, Box<dyn std::error::Error>> {
+    let address = format!("{}:{}", config.host, config.port);
+    let mut stream = TcpStream::connect(&address).await?;
+    let request = SecretRequest {
+        client_id: "vaultd-gui".to_string(),
+        command: "create-environment".to_string(),
+        environment: Some(env_name.to_string()),
+        variables: None,
+    };
+    let request_json = serde_json::to_vec(&request)?;
+    stream.write_all(&request_json).await?;
+    let mut response_buf = vec![0; 4096];
+    let n = stream.read(&mut response_buf).await?;
+    let response: SecretResponse = serde_json::from_slice(&response_buf[..n])?;
+    Ok(response)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -212,7 +249,8 @@ pub fn run() {
             list_environments,
             get_environment,
             save_environment,
-            delete_environment
+            delete_environment,
+            create_environment
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
