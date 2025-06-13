@@ -1,7 +1,8 @@
-use crate::config::load_config;
+use crate::config::{load_config, save_config};
 use std::io::{Write, Read};
 use std::net::TcpStream;
 use std::collections::HashMap;
+use std::env;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -20,8 +21,8 @@ struct SecretResponse {
     environments: Option<Vec<String>>,
 }
 
-pub fn run(env: String) {
-    let config = load_config();
+pub fn run(env: String, shell_output: bool) {
+    let mut config = load_config();
     let conn_name = match config.default.as_ref() {
         Some(name) => name,
         None => {
@@ -82,9 +83,38 @@ pub fn run(env: String) {
 
     if response.success {
         if let Some(vars) = response.env_vars {
-            for (key, value) in vars {
-                println!("export {}='{}'", key, value.replace('\'', "'\\''"));
+            if shell_output {
+                // Output shell commands for eval
+                println!("export VAULTWRAP_OLD_PS1=\"$PS1\"");
+                println!("export PS1=\"({}) $PS1\"", env);
+                
+                // Only export variables if runtime injection is disabled
+                if !config.runtime_injection.enabled {
+                    for (key, value) in vars {
+                        println!("export {}='{}'", key, value.replace('\'', "'\\''"));
+                    }
+                }
+            } else {
+                // Directly modify current process environment
+                if let Ok(current_ps1) = env::var("PS1") {
+                    env::set_var("VAULTWRAP_OLD_PS1", current_ps1);
+                }
+                
+                let current_ps1 = env::var("PS1").unwrap_or_else(|_| "%n@%m %1~ %# ".to_string());
+                env::set_var("PS1", format!("({}) {}", env, current_ps1));
+                
+                if !config.runtime_injection.enabled {
+                    for (key, value) in vars {
+                        env::set_var(key, value);
+                    }
+                }
+                
+                println!("Environment '{}' activated.", env);
             }
+            
+            // Save the last set environment to config
+            config.last_set_env = Some(env.clone());
+            save_config(&config);
         }
     } else {
         eprintln!("Error: {}", response.message.unwrap_or("Unknown error".to_string()));

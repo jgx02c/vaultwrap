@@ -1,6 +1,6 @@
 # VaultWrap Usage Guide
 
-VaultWrap allows you to securely manage and inject environment variables into your applications without storing them in local .env files.
+VaultWrap allows you to securely manage and inject environment variables into your applications without storing them in local .env files. It works like Python's virtual environments (venv) but for environment variables.
 
 ## Setup
 
@@ -30,55 +30,171 @@ cargo run
 
 Keep this server running in a terminal window.
 
-## Usage Options
+### 3. Connect to the Server
 
-VaultWrap provides three different ways to use your environment variables:
-
-### Option 1: Direct Command Execution
-
-Run any command with environment variables injected at runtime:
-
-```bash
-./use-vault-env.sh python3 your_script.py
-```
-
-This will connect to the vault server, fetch the environment variables, and inject them only into that specific process.
-
-### Option 2: Shell Activation (like venv)
-
-Activate the vault environment in your current shell session:
-
-```bash
-source activate-vault.sh
-```
-
-Your prompt will change to show `(vault)` and all environment variables will be loaded into your shell. You can then run commands normally:
-
-```bash
-python3 your_script.py
-node server.js
-```
-
-When finished, deactivate the environment:
-
-```bash
-deactivate
-```
-
-### Option 3: Direct CLI Usage
-
-You can also use the vaultwrap CLI directly:
+First, connect your CLI to the vault server:
 
 ```bash
 cd vaultwrap
-cargo run -- run python3 your_script.py
+cargo run -- connect localhost:4000 --save local --default
 ```
 
-## How to Use in Different Projects
+## Core Usage (Python venv-like)
 
-1. **Local Development**: Simply copy `use-vault-env.sh` or `activate-vault.sh` to your project directory
-2. **CI/CD Pipeline**: Integrate the vaultwrap CLI into your build process
-3. **Team Development**: Run vaultd on a central server and configure each developer with the client scripts
+VaultWrap works exactly like Python virtual environments:
+
+### Activate an Environment
+
+Set environment variables in your current shell (like `source venv/bin/activate`):
+
+```bash
+eval "$(cargo run -- set dev)"
+```
+
+Your shell prompt will change to show `(dev)` and all environment variables from the `dev` environment will be available:
+
+```bash
+(dev) joshuagoodman$ echo $DATABASE_URL
+postgres://user:password@localhost:5432/mydb
+```
+
+### Deactivate the Environment
+
+Remove environment variables from your shell (like `deactivate`):
+
+```bash
+eval "$(cargo run -- drop)"
+```
+
+Your prompt returns to normal and all vault environment variables are removed.
+
+## Runtime Injection Mode (Optional)
+
+Runtime injection allows you to automatically inject environment variables when specific commands run, without setting them in your shell.
+
+### Configure Commands for Injection
+
+Add commands that should automatically get environment variables:
+
+```bash
+cargo run -- add cargo      # Inject vars when running cargo
+cargo run -- add python3    # Inject vars when running python3
+cargo run -- add node       # Inject vars when running node
+```
+
+### Enable Runtime Injection
+
+```bash
+cargo run -- enable
+```
+
+Now when you activate an environment with runtime injection enabled, variables are NOT set in your shell. Instead, they're automatically injected only when the configured commands run:
+
+```bash
+eval "$(cargo run -- set dev)"  # Only sets prompt to (dev), no variables in shell
+cargo run                       # Automatically gets dev environment variables
+python3 app.py                  # Automatically gets dev environment variables
+echo $DATABASE_URL              # Empty - variables not in shell
+```
+
+### Manage Runtime Commands
+
+```bash
+# Add a command
+cargo run -- add python
+
+# Remove a command  
+cargo run -- remove cargo
+
+# Check status
+cargo run -- status
+
+# Disable runtime injection
+cargo run -- disable
+```
+
+### Two Modes Comparison
+
+**Normal Mode (runtime injection disabled):**
+- `vaultwrap set dev` outputs all environment variables
+- Variables are set in your shell session
+- All commands in that shell have access to the variables
+
+**Runtime Injection Mode (runtime injection enabled):**
+- `vaultwrap set dev` only sets the prompt to `(dev)`
+- Variables are NOT set in your shell
+- Only configured commands (cargo, python3, etc.) get the variables automatically
+- More secure - variables only exist during command execution
+
+## Environment Management
+
+### List Environments
+
+```bash
+cargo run -- env list
+```
+
+### Create New Environment
+
+```bash
+cargo run -- env add production
+```
+
+### Add Variables to Environment
+
+```bash
+cargo run -- key add production DATABASE_URL "postgres://prod:secret@prod-db:5432/app"
+cargo run -- key add production API_KEY "prod-api-key-12345"
+```
+
+### Delete Environment
+
+```bash
+cargo run -- env delete staging
+```
+
+## Connection Management
+
+### Save Multiple Connections
+
+```bash
+# Connect to development server
+cargo run -- connect dev.company.com:4000 --save dev
+
+# Connect to production server  
+cargo run -- connect prod.company.com:4000 --save prod --default
+```
+
+### Switch Between Connections
+
+```bash
+cargo run -- connections use dev
+cargo run -- connections use prod
+```
+
+### List Saved Connections
+
+```bash
+cargo run -- connections list
+```
+
+## Installation (Optional)
+
+To install globally and use `vaultwrap` instead of `cargo run --`:
+
+```bash
+cd vaultwrap
+cargo install --path .
+```
+
+Then you can use:
+
+```bash
+eval "$(vaultwrap set dev)"
+eval "$(vaultwrap drop)"
+vaultwrap add cargo
+vaultwrap enable
+```
 
 ## Security Benefits
 
@@ -87,11 +203,15 @@ cargo run -- run python3 your_script.py
 - Access control is managed centrally
 - Automatic cleanup when processes terminate
 - Memory protection prevents sensitive data exposure
+- Works seamlessly with existing development workflows
+- Runtime injection mode provides even more security by limiting variable exposure
 
 ## Troubleshooting
 
 - **Connection error**: Make sure vaultd is running
-- **Command not authorized**: Check the allowed commands in vaultd's configuration
-- **Shell prompt issues**: Run `unalias deactivate` before activating again
+- **No default connection**: Run `vaultwrap connect` first
+- **Shell prompt issues**: Make sure to use `eval "$(vaultwrap set <env>)"` and `eval "$(vaultwrap drop)"`
+- **Variables not set**: Check that the environment exists with `vaultwrap env list`
+- **Runtime injection not working**: Check `vaultwrap status` and ensure commands are added with `vaultwrap add <command>`
 
 For more details, see the main project README.md. 

@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use dirs::home_dir;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Connection {
     pub host: String,
     pub port: u16,
@@ -11,11 +12,32 @@ pub struct Connection {
     pub password: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize)]
 pub struct Config {
+    pub connections: HashMap<String, Connection>,
     pub default: Option<String>,
-    pub connections: std::collections::HashMap<String, Connection>,
     pub last_set_env: Option<String>,
+    pub runtime_injection: RuntimeInjectionConfig,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RuntimeInjectionConfig {
+    pub enabled: bool,
+    pub commands: Vec<String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            connections: HashMap::new(),
+            default: None,
+            last_set_env: None,
+            runtime_injection: RuntimeInjectionConfig {
+                enabled: false,
+                commands: Vec::new(),
+            },
+        }
+    }
 }
 
 pub fn config_path() -> PathBuf {
@@ -30,7 +52,7 @@ pub fn load_config() -> Config {
     let path = config_path();
     if path.exists() {
         let data = fs::read_to_string(path).expect("Failed to read config");
-        serde_json::from_str(&data).unwrap_or_default()
+        serde_json::from_str(&data).unwrap_or_else(|_| Config::default())
     } else {
         Config::default()
     }

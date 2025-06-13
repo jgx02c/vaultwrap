@@ -1,4 +1,4 @@
-use crate::config::{Config, Connection, load_config, save_config};
+use crate::config::{Connection, load_config, save_config};
 use crate::ConnectionsSub;
 
 pub fn connect(
