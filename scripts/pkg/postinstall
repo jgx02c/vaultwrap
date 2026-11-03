@@ -1,0 +1,18 @@
+#!/bin/sh
+# Runs as root after the app is copied to /Applications.
+APP="/Applications/Vaultwrap.app"
+CLI="$APP/Contents/MacOS/vaultwrap"
+
+# 1. Put the `vaultwrap` command on PATH.
+mkdir -p /usr/local/bin
+ln -sf "$CLI" /usr/local/bin/vaultwrap
+
+# 2. Per-user setup for whoever is logged in: start the daemon at login,
+#    then open the app so they can create or unlock their vault.
+CONSOLE_USER=$(stat -f%Su /dev/console)
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ] && [ "$CONSOLE_USER" != "loginwindow" ]; then
+  USER_ID=$(id -u "$CONSOLE_USER")
+  launchctl asuser "$USER_ID" sudo -u "$CONSOLE_USER" -H "$CLI" service install >/dev/null 2>&1 || true
+  launchctl asuser "$USER_ID" sudo -u "$CONSOLE_USER" -H /usr/bin/open "$APP" || true
+fi
+exit 0

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Stand-in for the Azure CLI in demo mode: hands out a token the mock vault accepts.
+echo '{"accessToken":"demo-token","expiresOn":"2099-01-01 00:00:00.000000"}'

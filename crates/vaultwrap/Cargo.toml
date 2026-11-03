@@ -1,0 +1,21 @@
+[package]
+name = "vaultwrap"
+description = "Inject secrets from local or remote vaults (Azure Key Vault, .env, any CLI) into your processes"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "vaultwrap"
+path = "src/main.rs"
+
+[dependencies]
+vaultwrap-core = { path = "../vaultwrap-core" }
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+clap = { version = "4", features = ["derive", "env"] }
+rpassword = "7"
+toml = "0.8"
+libc = "0.2"

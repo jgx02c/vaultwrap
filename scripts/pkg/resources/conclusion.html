@@ -1,0 +1,9 @@
+<html><body style="font-family:-apple-system,sans-serif;font-size:13px">
+<h2>You're all set</h2>
+<p>Vaultwrap will open so you can create your vault. Look for the lock icon in your menu bar.</p>
+<p>In a terminal:</p>
+<pre>vaultwrap link myorg/myproject -e staging
+vaultwrap run -- npm run dev</pre>
+<p>To load secrets automatically when you <code>cd</code> into a project, add this to <code>~/.zshrc</code>:</p>
+<pre>eval "$(vaultwrap hook zsh)"</pre>
+</body></html>

@@ -1,0 +1,18 @@
+[package]
+name = "vaultwrap-desktop"
+description = "Vaultwrap desktop app: menu-bar UI for the vaultwrap daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+vaultwrap-core = { path = "../vaultwrap-core" }
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+libc = "0.2"

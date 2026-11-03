@@ -1,21 +1,20 @@
-# Rust build directory
 /target/
 **/target/
 
-# IDE specific files
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# Environment and secrets
-**/secrets.toml
-.env
-.env.*
-
-# OS specific files
 .DS_Store
 Thumbs.db
 
-# Debug files
-*.pdb 
+# Never commit plaintext secrets
+.env
+.env.*
+!.env.example
+*.db
+
+# Local dev vault and build outputs
+/.dev/
+/dist/
+/crates/vaultwrap-desktop/gen/
